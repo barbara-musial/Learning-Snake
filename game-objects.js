@@ -9,8 +9,8 @@ export const GAME_OBJECTS = {
       size: 20,
       color: "red",
       startPosition: {
-        x: 80,
-        y: 80,
+        x: 0,
+        y: 0,
       },
     },
     tail: {
@@ -20,6 +20,8 @@ export const GAME_OBJECTS = {
     },
     apple: {
       size: 20,
+      class: "apple",
+      color: "green",
     },
   },
 };

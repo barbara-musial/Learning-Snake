@@ -10,94 +10,106 @@ const {
   size: headSize,
   startPosition: headStartPosition,
 } = headInfo;
-const { size: appleSize } = appleInfo;
+const { size: appleSize, class: appleClass, color: appleColor } = appleInfo;
 const { size: tailSize, class: tailClass, color: tailColor } = tailInfo;
-const SPEED = 1000; // in miliseconds
-let applePositionIndex = 2;
+const SPEED = 500; // in miliseconds
+let applePositionIndex = 0;
 
-const draw = SVG()
+const playground = SVG()
   .addTo("body")
   .size(playgroundSize, playgroundSize)
   .addClass("playground");
 
-const snakeHead = draw
+const tail = playground.group();
+const snakeHead = SVG()
   .rect(headSize, headSize)
-  .attr({ class: headClass, fill: headColor })
-  .center(headStartPosition.x, headStartPosition.y);
-
-const tailPart = draw
+  .addClass(headClass)
+  .attr({ fill: headColor });
+const tailPart = SVG()
   .rect(tailSize, tailSize)
-  .attr({ class: tailClass })
-  .hide();
-// const tailPart = draw
-//   .rect(tailSize)
-//   .attr({ class: tailClass, fill: tailColor })
-//   .hide();
+  .addClass(tailClass)
+  .attr({ fill: tailColor });
 
-const apple = draw.circle(appleSize, appleSize);
+const apple = SVG()
+  .circle(appleSize)
+  .addClass(appleClass)
+  .attr({ fill: appleColor });
 
-draw.add(snakeHead);
-addNewApple();
+tail.addTo(playground);
+snakeHead.addTo(playground);
+apple.addTo(playground);
 
-let i = 1;
-const moveInterval = setInterval(() => {
-  snakeHead.animate(300, 0, "absolute").move(i * headSize, 0);
-  if (i === 6) {
-    addTail();
-  }
-  i++;
-}, SPEED);
+moveApple();
+addTail();
 
-function addNewApple() {
+function moveApple() {
   const { x, y } = APPLE_POSITIONS[applePositionIndex];
   apple.move(x * headSize, y * headSize);
   applePositionIndex++;
 }
 
 function addTail() {
-  const tailPartCopy = tailPart
-    .clone()
-    .show()
-    .center(draw.last().cx(), draw.last().cy());
+  const tailClone = tailPart.clone().move(0, 0);
 
-  draw.add(tailPartCopy);
+  tailClone.addTo(tail);
 }
 
-function updateMove() {
-  const headPosition = {
-    x: snakeHead.cx(),
-    y: snakeHead.cy(),
-  };
-
-  let xDiff, yDiff;
-  draw.each(function (i, children) {
-    const classList = Object.values(this.node.classList);
-    const isSnakePart =
-      classList.includes(headClass) || classList.includes(tailClass);
-
-    if (isSnakePart) {
-      xDiff = Math.abs(headPosition.x - this.cx());
-      yDiff = Math.abs(headPosition.y - this.cy());
+function updateTailMove() {
+  let prevX, prevY;
+  tail.each(function (i, children) {
+    if (!i) {
+      prevX = snakeHead.x();
+      prevY = snakeHead.y();
     }
+
+    const tempX = this.x();
+    const tempY = this.y();
+
+    this.move(prevX, prevY);
+    prevX = tempX;
+    prevY = tempY;
   });
 }
 
 function restart() {
-  clearInterval(moveInterval);
-
-  draw.each(function (i, children) {
-    const isSnakeHead = Object.values(this.node.classList).includes(headClass);
-
-    if (isSnakeHead) {
-      return;
-    }
-
-    this.hide();
-  });
-
-  snakeHead.move(headStartPosition.x, headStartPosition.y);
-  draw.clear();
-  draw.add(snakeHead);
+  tail.clear();
+  snakeHead.move(
+    headStartPosition.x * headSize,
+    headStartPosition.y * headSize
+  );
   applePositionIndex = 0;
-  addNewApple();
+  moveApple();
 }
+
+function isPlaygroundCollision(headX, headY, playgroundSize) {
+  return (
+    headX < 0 || headX >= playgroundSize || headY < 0 || headY >= playgroundSize
+  );
+}
+
+function isAppleCollision(headX, headY, appleX, appleY) {
+  return headX === appleX && headY === appleY;
+}
+
+function update() {
+  const headX = snakeHead.x();
+  const headY = snakeHead.y();
+  const appleX = apple.x();
+  const appleY = apple.y();
+
+  // addTail();
+  updateTailMove();
+  snakeHead.move(headX + headSize, headY);
+
+  if (isPlaygroundCollision(headX, headY, playgroundSize)) {
+    restart();
+    return;
+  }
+
+  if (isAppleCollision(headX, headY, appleX, appleY)) {
+    addTail();
+    moveApple();
+  }
+}
+
+setInterval(update, SPEED);
