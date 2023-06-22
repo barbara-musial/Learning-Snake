@@ -1,6 +1,13 @@
 import { GAME_OBJECTS } from "./game-objects.js";
 import { APPLE_POSITIONS } from "./apple-positions.js";
 
+const POSSIBLE_MOVEMENTS = [
+  { x: -20, y: 0 },
+  { x: 0, y: -20 },
+  { x: 20, y: 0 },
+  { x: 0, y: 20 },
+];
+
 const { playground: playgroundInfo, snake: snakeInfo } = GAME_OBJECTS;
 const { size: playgroundSize, class: playgroundClass } = playgroundInfo;
 const { head: headInfo, tail: tailInfo, apple: appleInfo } = snakeInfo;
@@ -54,18 +61,19 @@ function addTail() {
   tailClone.addTo(tail);
 }
 
-function updateTailMove() {
+function updateTailMove(prevHeadX, prevHeadY) {
   let prevX, prevY;
   tail.each(function (i, children) {
     if (!i) {
-      prevX = snakeHead.x();
-      prevY = snakeHead.y();
+      prevX = prevHeadX;
+      prevY = prevHeadY;
     }
 
     const tempX = this.x();
     const tempY = this.y();
 
     this.move(prevX, prevY);
+
     prevX = tempX;
     prevY = tempY;
   });
@@ -91,22 +99,62 @@ function isAppleCollision(headX, headY, appleX, appleY) {
   return headX === appleX && headY === appleY;
 }
 
+function isCollisionWithTail(headX, headY) {
+  let isCollision = false;
+
+  tail.each(function (i, children) {
+    if (isCollision) {
+      return;
+    }
+    const tailPartX = children[i].x();
+    const tailPartY = children[i].y();
+
+    isCollision = headX === tailPartX && headY === tailPartY;
+  });
+  return isCollision;
+}
+
+function chooseMove() {
+  const randomNumFrom0To3 = Math.floor(Math.random() * 4);
+  const nextMove = POSSIBLE_MOVEMENTS[randomNumFrom0To3];
+  const newX = snakeHead.x() + nextMove.x;
+  const newY = snakeHead.y() + nextMove.y;
+
+  const firstTailPartX = tail.first()?.x();
+  const firstTailPartY = tail.first()?.y();
+
+  if (newX === firstTailPartX && newY === firstTailPartY) {
+    return chooseMove();
+  } else {
+    return [newX, newY];
+  }
+}
+
 function update() {
-  const headX = snakeHead.x();
-  const headY = snakeHead.y();
+  const prevHeadX = snakeHead.x();
+  const prevHeadY = snakeHead.y();
+
   const appleX = apple.x();
   const appleY = apple.y();
 
-  // addTail();
-  updateTailMove();
-  snakeHead.move(headX + headSize, headY);
+  const [newHeadX, newHeadY] = chooseMove();
 
-  if (isPlaygroundCollision(headX, headY, playgroundSize)) {
+  //move snake
+  addTail();
+  snakeHead.move(newHeadX, newHeadY);
+  updateTailMove(prevHeadX, prevHeadY);
+
+  //check collision with borders
+  if (
+    isPlaygroundCollision(newHeadX, newHeadY, playgroundSize) ||
+    isCollisionWithTail(newHeadX, newHeadY)
+  ) {
     restart();
     return;
   }
 
-  if (isAppleCollision(headX, headY, appleX, appleY)) {
+  //check collision with apple
+  if (isAppleCollision(newHeadX, newHeadY, appleX, appleY)) {
     addTail();
     moveApple();
   }
