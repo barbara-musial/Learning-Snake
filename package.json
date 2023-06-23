@@ -1,0 +1,7 @@
+{
+  "name": "Learning-Snake",
+  "version": "1.0.0",
+  "dependencies": {
+    "@flatten-js/interval-tree": "^1.0.20"
+  }
+}
